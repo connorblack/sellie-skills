@@ -5,9 +5,10 @@ can be installed anywhere instead of being copied by hand between machines,
 agent roots, and repos.
 
 Every skill here is one we wrote. Skills we merely *use* — `agent-browser`,
-`adversarial-reviewer`, `emdash-cli` from `emdash-cms/emdash`, the Cloudflare
-and Hermes catalogs — are not vendored here; install those from their own
-upstreams so updates keep flowing.
+`adversarial-reviewer`, `emdash-cli` from `emdash-cms/emdash`, `dogfood` and
+`adversarial-ux-test` from `nousresearch/hermes-agent`, the Cloudflare catalog
+— are deliberately **not** vendored here. Install those from their own
+upstreams so attribution stays intact and updates keep flowing.
 
 ## Install
 
@@ -27,7 +28,6 @@ Installs are recorded in `skills-lock.json` (per-project) or `~/skills-lock.json
 |---|---|
 | `control-cli` | Build or adapt a local harness to drive and inspect a CLI/TUI program with evidence. |
 | `control-ui` | Drive and inspect a web/IDE/Electron UI locally — screenshots, a11y snapshots, perf profiles, CDP. Defers to a repo-mandated driver when one exists. |
-| `web-quality-assurance` | Router for structured web QA: hostile-persona dogfooding, adversarial UX testing, and issue triage into a shared taxonomy. |
 | `kanban-meta-triage` | Operate a Hermes kanban board as an orchestrator — sequencing, hazard avoidance, and preserving card work across the three workspace kinds. |
 | `emdash-sitewide-content-pass` | Orchestrate a site-wide content improvement pass for an EmDash site: scoping, search intelligence, skill stacking, artifacts. |
 

@@ -29,7 +29,7 @@ that exposes raw CDP gets you the same profiles, traces, and heap snapshots.
 - Verifying visual or accessibility changes with screenshots and snapshots.
 - Checking local web, IDE, or Electron behavior before shipping.
 - Capturing console logs, network logs, CPU profiles, traces, or heap snapshots.
-- Creating before/after evidence for `verify-this`.
+- Creating before/after evidence for a downstream verification step.
 
 ## Setup Pattern
 
