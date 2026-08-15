@@ -22,6 +22,15 @@ Everything below this heading is generated when you read this skill, so it
 cannot go stale. If it is empty or errors, hermes is not reachable — say so
 rather than falling back to remembered flags.
 
+> **If the blocks below appear as literal text starting with `` !` ``, the
+> injection did not run — run each of those commands yourself with Bash before
+> continuing, and use the real output.** Inline shell expansion is a host
+> feature, not a guarantee: Claude Code performs it by default, Hermes only when
+> `skills.inline_shell` is true (it ships false), and other hosts not at all. A
+> host that does not expand them leaves the backticks intact, which is your
+> signal. Never proceed on remembered flag names because the injection was
+> silent — that is the exact failure this section exists to prevent.
+
 **Command inventory:**
 
 !`hermes kanban --help 2>&1 | grep -v "1Password" | sed -n '/positional arguments:/,$p'`
