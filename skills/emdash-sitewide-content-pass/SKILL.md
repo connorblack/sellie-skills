@@ -277,7 +277,7 @@ following:
    - Point to the exact file under
      `your local agent-skills directory`.
    - Example:
-     `the `style-forensics` skill`
+     the `style-forensics` skill
 
 2. **Exact CLI or tool surface to use**
    - Do not say "use the browser" generically.
@@ -413,7 +413,7 @@ Default fan-out pattern:
 - assign one output file per subagent under a dedicated audit folder such as
   `plans/audits/serp-style-forensics/`
 - require each subagent to load
-  `the `style-forensics` skill`
+  the `style-forensics` skill
 - require each subagent to use `agent-browser` for headless browser work
 - require each subagent prompt to name the exact source URL, exact context
   files, exact owned output path, and the exact required report sections
