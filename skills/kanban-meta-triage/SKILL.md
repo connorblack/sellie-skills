@@ -161,6 +161,87 @@ worktree cards, and this skill previously claimed they did. Verify per kind.
   functionally `git add -A`. If a `dir` card must commit, it stages the specific
   files it wrote, the same rule the repo's CLAUDE.md sets for everyone.
 
+## Merging onto a dirty working tree
+
+The shared checkout is **permanently dirty** — a solo human and an agent team
+work the same tree, so there is always in-flight work sitting uncommitted. That
+is normal here, not a problem to escalate.
+
+**You can merge on dirty.** git blocks *only* where the merge would overwrite
+uncommitted changes in files the merge touches. Observed 2026-08-14: 89 dirty
+files, six merges landed, and the only aborts came from the two or three files
+that actually overlapped. Check overlap before assuming you are blocked:
+
+```bash
+git diff --name-only main...<branch> | while read f; do
+  git status --porcelain "$f" | grep -q . && echo "OVERLAP: $f"
+done
+```
+
+### Triage the overlap by what the change actually is
+
+Do not apply the same procedural gravity to a lockfile as to someone's
+half-written feature. Most overlap is mechanical:
+
+| the overlapping change is | move |
+|---|---|
+| no overlap at all | just merge |
+| **mechanically trivial** — `bun.lock`, version bumps, generated output, a mode bit, temp/test artifacts an agent forgot to gitignore | do the smart thing: commit it, gitignore it, or trash it. No ceremony. |
+| yours, and finished | commit it |
+| redundant — the branch already contains the same change | discard it (`git checkout -- <path>`) |
+| **someone's real in-flight work** | park it with the trash pattern below, merge, restore |
+
+Generated output and forgotten artifacts belong in `.gitignore`, not in a
+decision. A lockfile that is one side of a merge gets regenerated, not
+hand-merged.
+
+### NEVER `git stash`
+
+`git stash` is the wrong tool in a shared checkout and causes real problems:
+
+- The stack is **invisible** to every other session and agent in the tree.
+  Nothing in `git status`, the board, or any log mentions it.
+- Entries are opaque (`stash@{0}`) and stack across sessions, so a later pop can
+  restore the wrong thing.
+- A session that dies mid-stash parks the work somewhere nobody looks.
+
+This is not hypothetical. On 2026-08-14 this checkout held two orphaned
+entries, one dating from **2026-08-13** — more than a day of parked work no
+subsequent session knew existed.
+
+### Use a manual, discoverable trash instead
+
+Park the change on disk with a note explaining what and why, then clean the
+path so the merge proceeds:
+
+```bash
+TS=$(date -u +%Y%m%dT%H%M%SZ)
+D=".trash/${TS}-<short-slug>"
+mkdir -p "$D"
+cp <paths> "$D"/                      # copy, never move
+$EDITOR "$D/MANIFEST.md"              # what, why, how to restore, what was NOT lost
+git checkout -- <paths>               # or: git rm --cached for untracked
+```
+
+The MANIFEST must say how to get the change back and confirm what is recoverable
+from git anyway. A tracked file restored with `git checkout --` is recoverable
+via `git show HEAD:<path>` — say so, so the note is not mistaken for the only
+copy.
+
+`.trash/` is gitignored, greppable, timestamped, and survives a dead session.
+Anyone can find it; nobody can find `stash@{2}`.
+
+### Never block, never obfuscate
+
+Two failure modes, equally bad:
+
+- **Over-blocking** — refusing to merge, escalating to the human, or filing a
+  card because a lockfile was dirty. A missing package gets installed. A
+  generated file gets gitignored. Do the small obvious thing and keep moving.
+- **Obfuscating** — `git stash`, a silent `checkout --` of someone's work, or
+  parking files where nobody will look. If you move someone else's work, it must
+  be findable without asking you.
+
 ## The loop
 
 0. **Confirm which board you are on.** Every command without `--board` hits the

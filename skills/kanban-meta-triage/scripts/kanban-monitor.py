@@ -101,6 +101,39 @@ def poll_events(con, cursor):
     return cursor
 
 
+
+_TASK_ROW_WARNED = False
+
+
+def _task_row(tid):
+    """Current status/failure count for a card, or None. Used to suppress
+    failure diagnostics that describe history the card has already recovered
+    from.
+
+    A failure here must NOT be silent: returning None fails OPEN (the
+    diagnostic still fires), so a broken probe would quietly restore the exact
+    noise this filter exists to remove. Warn once per process instead.
+    """
+    global _TASK_ROW_WARNED
+    con = None
+    try:
+        con = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+        con.row_factory = sqlite3.Row
+        return con.execute(
+            "SELECT status, consecutive_failures FROM tasks WHERE id = ?",
+            (tid,),
+        ).fetchone()
+    except Exception as ex:
+        if not _TASK_ROW_WARNED:
+            _TASK_ROW_WARNED = True
+            emit(f"[MON-ERR] staleness filter disabled — cannot read task rows: "
+                 f"{type(ex).__name__}: {ex}. Failure diagnostics will include "
+                 f"stale history until this is fixed.")
+        return None
+    finally:
+        if con is not None:
+            con.close()
+
 def check_health(con, active):
     """Return the set of currently-active health signals, emitting new ones."""
     now = int(time.time())
@@ -120,10 +153,28 @@ def check_health(con, active):
             for task in json.loads(out):
                 tid = task.get("task_id")
                 for r in task.get("diagnostics", []):
-                    k = f"diag:{r.get('kind')}:{tid}"
+                    kind = r.get("kind")
+                    # STALENESS FILTER. The failure diagnostics count HISTORICAL
+                    # runs and label them "the last N runs", without checking
+                    # whether a later run ended otherwise. Six false-positive
+                    # `repeated_crashes` criticals fired on 2026-08-14 against
+                    # cards that were parked, reassigned, or already recovered --
+                    # one of them while the card sat at fails=0 having just
+                    # ended a run with a deliberate `blocked`.
+                    #
+                    # A card is only genuinely failing if its CURRENT state says
+                    # so. consecutive_failures is reset by the dispatcher on a
+                    # clean run, so it is the honest signal.
+                    if kind in ("repeated_crashes", "repeated_failures"):
+                        cur = _task_row(tid)
+                        if cur and cur["consecutive_failures"] == 0:
+                            continue  # recovered since; the count is history
+                        if cur and cur["status"] in ("done", "archived", "blocked"):
+                            continue  # parked or finished; nothing to act on
+                    k = f"diag:{kind}:{tid}"
                     found[k] = (
                         f"[HEALTH] diagnostic {r.get('severity', '?')} "
-                        f"{r.get('kind')} {tid} (x{r.get('count', 1)}) "
+                        f"{kind} {tid} (x{r.get('count', 1)}) "
                         f"{one_line(r.get('title'), 120)} — "
                         f"{one_line(r.get('detail'), 160)}")
     except Exception as ex:
